@@ -397,7 +397,7 @@ function createIframes() {
     iframe.id = `iframe-${tab.id}`;
     iframe.className = `github-ui-ext-iframe ${tab.id === modalState.activeTab ? 'active' : 'preloading'}`;
     iframe.src = tab.url;
-    iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-popups-to-escape-sandbox';
+    // iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-popups-to-escape-sandbox';
     container.appendChild(iframe);
     
     // Remove preloading class after load
