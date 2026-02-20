@@ -8,8 +8,7 @@ export default defineConfig({
     permissions: [
       'storage',
       'tabs',
-      'webRequest',
-      'webRequestBlocking'
+      'sidePanel'
     ],
     host_permissions: [
       'https://github.com/*'
@@ -17,6 +16,9 @@ export default defineConfig({
     action: {
       default_popup: 'popup.html',
       default_title: 'GitHub UI Extension'
+    },
+    side_panel: {
+      default_path: 'sidepanel.html'
     }
   },
 });
