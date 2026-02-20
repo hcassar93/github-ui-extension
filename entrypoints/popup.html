@@ -112,16 +112,33 @@
     .item-name {
       font-weight: 600;
       font-size: 14px;
+      flex: 1;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .edit-btn, .remove-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .edit-btn {
+      color: #58a6ff;
+    }
+
+    .edit-btn:hover {
+      color: #79c0ff;
     }
 
     .remove-btn {
-      background: transparent;
-      border: none;
       color: #f85149;
-      cursor: pointer;
-      padding: 4px 8px;
-      font-size: 16px;
-      line-height: 1;
     }
 
     .remove-btn:hover {
@@ -160,7 +177,7 @@
       cursor: pointer;
     }
 
-    .project-inputs {
+    .project-inputs, .people-inputs {
       display: flex;
       gap: 8px;
       margin-bottom: 8px;
@@ -216,6 +233,28 @@
       font-size: 12px;
     }
 
+    .edit-form {
+      margin-bottom: 8px;
+      padding: 8px;
+      background: #0d1117;
+      border-radius: 4px;
+    }
+
+    .edit-form input {
+      margin-bottom: 6px;
+    }
+
+    .edit-form-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .edit-form-actions button {
+      flex: 1;
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
     .info {
       font-size: 12px;
       color: #8b949e;
@@ -247,94 +286,227 @@
     <ul class="item-list" id="project-list"></ul>
   </div>
 
+  <div class="section">
+    <h2>People</h2>
+    <div class="add-form">
+      <input type="text" id="people-input" placeholder="username">
+      <button id="add-people-btn">Add</button>
+    </div>
+    <ul class="item-list" id="people-list"></ul>
+  </div>
+
   <div class="info">
-    💡 Add quick links to repo tabs and project views. They'll appear in the sidebar.
+    💡 Add quick links to repos, projects, and people. They'll appear in the sidebar.
   </div>
 
   <script type="module">
     const REPO_TABS = ['issues', 'pulls', 'actions', 'projects', 'security', 'insights', 'settings'];
+    let editingRepo = null;
+    let editingProject = null;
 
     async function loadData() {
-      const data = await chrome.storage.sync.get(['repos', 'projects']);
+      const data = await chrome.storage.sync.get(['repos', 'projects', 'people']);
       return {
         repos: data.repos || [],
-        projects: data.projects || []
+        projects: data.projects || [],
+        people: data.people || []
       };
     }
 
-    async function saveData(repos, projects) {
-      await chrome.storage.sync.set({ repos, projects });
+    async function saveData(repos, projects, people) {
+      await chrome.storage.sync.set({ repos, projects, people });
       const tabs = await chrome.tabs.query({ url: 'https://github.com/*' });
       tabs.forEach(tab => chrome.tabs.reload(tab.id));
     }
 
     async function render() {
-      const { repos, projects } = await loadData();
+      const { repos, projects, people } = await loadData();
       
       const repoList = document.getElementById('repo-list');
-      repoList.innerHTML = repos.map((repo, index) => `
-        <li class="item">
-          <div class="item-header">
-            <span class="item-name">${repo.name}</span>
-            <button class="remove-btn" data-remove-repo="${index}">×</button>
-          </div>
-          <div class="tabs-section">
-            <div class="tabs-label">Quick links:</div>
-            <div class="tab-checkboxes">
-              ${REPO_TABS.map(tab => `
-                <div class="tab-checkbox">
-                  <input type="checkbox" id="repo-${index}-${tab}" 
-                         data-repo-index="${index}"
-                         data-tab="${tab}"
-                         ${repo.tabs?.includes(tab) ? 'checked' : ''}>
-                  <label for="repo-${index}-${tab}">${tab}</label>
+      repoList.innerHTML = repos.map((repo, index) => {
+        if (editingRepo === index) {
+          return `
+            <li class="item">
+              <div class="edit-form">
+                <input type="text" id="edit-repo-path-${index}" placeholder="owner/repo" value="${repo.repo}">
+                <input type="text" id="edit-repo-name-${index}" placeholder="Display name (optional)" value="${repo.name || ''}">
+                <div class="edit-form-actions">
+                  <button class="secondary" data-cancel-edit-repo="${index}">Cancel</button>
+                  <button data-save-edit-repo="${index}">Save</button>
                 </div>
-              `).join('')}
+              </div>
+            </li>
+          `;
+        }
+        
+        const displayName = repo.name || repo.repo;
+        return `
+          <li class="item">
+            <div class="item-header">
+              <span class="item-name">${displayName}</span>
+              <div class="item-actions">
+                <button class="edit-btn" data-edit-repo="${index}">✎</button>
+                <button class="remove-btn" data-remove-repo="${index}">×</button>
+              </div>
             </div>
-          </div>
-        </li>
-      `).join('') || '<li style="color: #8b949e; font-size: 12px; padding: 8px 0;">No repositories pinned</li>';
+            <div class="tabs-section">
+              <div class="tabs-label">Quick links:</div>
+              <div class="tab-checkboxes">
+                ${REPO_TABS.map(tab => `
+                  <div class="tab-checkbox">
+                    <input type="checkbox" id="repo-${index}-${tab}" 
+                           data-repo-index="${index}"
+                           data-tab="${tab}"
+                           ${repo.tabs?.includes(tab) ? 'checked' : ''}>
+                    <label for="repo-${index}-${tab}">${tab}</label>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </li>
+        `;
+      }).join('') || '<li style="color: #8b949e; font-size: 12px; padding: 8px 0;">No repositories pinned</li>';
 
       const projectList = document.getElementById('project-list');
-      projectList.innerHTML = projects.map((project, index) => `
+      projectList.innerHTML = projects.map((project, index) => {
+        if (editingProject === index) {
+          return `
+            <li class="item">
+              <div class="edit-form">
+                <input type="text" id="edit-project-name-${index}" placeholder="Name" value="${project.name}">
+                <input type="text" id="edit-project-url-${index}" placeholder="URL" value="${project.url}">
+                <div class="edit-form-actions">
+                  <button class="secondary" data-cancel-edit-project="${index}">Cancel</button>
+                  <button data-save-edit-project="${index}">Save</button>
+                </div>
+              </div>
+            </li>
+          `;
+        }
+        
+        return `
+          <li class="item">
+            <div class="item-header">
+              <div style="flex: 1;">
+                <div class="item-name">${project.name}</div>
+                <div style="font-size: 11px; color: #8b949e; margin-top: 2px;">${project.url}</div>
+              </div>
+              <div class="item-actions">
+                <button class="edit-btn" data-edit-project="${index}">✎</button>
+                <button class="remove-btn" data-remove-project="${index}">×</button>
+              </div>
+            </div>
+            <div class="views-section">
+              <div class="views-label">Views:</div>
+              ${(project.views || []).map((view, viewIndex) => `
+                <div class="view-item">
+                  <span>
+                    <span class="view-item-name">${view.name}</span>
+                    <span class="view-item-number">#${view.number}</span>
+                  </span>
+                  <button class="remove-btn" data-remove-view="${index}-${viewIndex}" style="padding: 2px 6px; font-size: 14px;">×</button>
+                </div>
+              `).join('') || '<div style="font-size: 11px; color: #8b949e; padding: 4px 0;">No views added</div>'}
+              <div class="add-view-form">
+                <input type="number" placeholder="#" data-view-number="${index}" min="1">
+                <input type="text" placeholder="View name" data-view-name="${index}">
+                <button class="secondary" data-add-view="${index}">+</button>
+              </div>
+            </div>
+          </li>
+        `;
+      }).join('') || '<li style="color: #8b949e; font-size: 12px; padding: 8px 0;">No projects added</li>';
+
+      const peopleList = document.getElementById('people-list');
+      peopleList.innerHTML = people.map((username, index) => `
         <li class="item">
           <div class="item-header">
-            <div>
-              <div class="item-name">${project.name}</div>
-              <div style="font-size: 11px; color: #8b949e; margin-top: 2px;">${project.url}</div>
-            </div>
-            <button class="remove-btn" data-remove-project="${index}">×</button>
-          </div>
-          <div class="views-section">
-            <div class="views-label">Views:</div>
-            ${(project.views || []).map((view, viewIndex) => `
-              <div class="view-item">
-                <span>
-                  <span class="view-item-name">${view.name}</span>
-                  <span class="view-item-number">#${view.number}</span>
-                </span>
-                <button class="remove-btn" data-remove-view="${index}-${viewIndex}" style="padding: 2px 6px; font-size: 14px;">×</button>
-              </div>
-            `).join('') || '<div style="font-size: 11px; color: #8b949e; padding: 4px 0;">No views added</div>'}
-            <div class="add-view-form">
-              <input type="number" placeholder="#" data-view-number="${index}" min="1">
-              <input type="text" placeholder="View name" data-view-name="${index}">
-              <button class="secondary" data-add-view="${index}">+</button>
-            </div>
+            <span class="item-name">${username}</span>
+            <button class="remove-btn" data-remove-person="${index}">×</button>
           </div>
         </li>
-      `).join('') || '<li style="color: #8b949e; font-size: 12px; padding: 8px 0;">No projects added</li>';
+      `).join('') || '<li style="color: #8b949e; font-size: 12px; padding: 8px 0;">No people added</li>';
 
       attachListeners();
     }
 
     function attachListeners() {
+      // Edit repo
+      document.querySelectorAll('[data-edit-repo]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          editingRepo = parseInt(btn.dataset.editRepo);
+          render();
+        });
+      });
+
+      document.querySelectorAll('[data-cancel-edit-repo]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          editingRepo = null;
+          render();
+        });
+      });
+
+      document.querySelectorAll('[data-save-edit-repo]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const index = parseInt(btn.dataset.saveEditRepo);
+          const repoPath = document.getElementById(`edit-repo-path-${index}`).value.trim();
+          const displayName = document.getElementById(`edit-repo-name-${index}`).value.trim();
+          
+          if (!repoPath || !repoPath.includes('/')) {
+            alert('Please use format: owner/repo');
+            return;
+          }
+
+          const { repos, projects, people } = await loadData();
+          repos[index].repo = repoPath;
+          repos[index].name = displayName || null;
+          await saveData(repos, projects, people);
+          
+          editingRepo = null;
+          render();
+        });
+      });
+
+      // Edit project
+      document.querySelectorAll('[data-edit-project]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          editingProject = parseInt(btn.dataset.editProject);
+          render();
+        });
+      });
+
+      document.querySelectorAll('[data-cancel-edit-project]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          editingProject = null;
+          render();
+        });
+      });
+
+      document.querySelectorAll('[data-save-edit-project]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const index = parseInt(btn.dataset.saveEditProject);
+          const name = document.getElementById(`edit-project-name-${index}`).value.trim();
+          const url = document.getElementById(`edit-project-url-${index}`).value.trim();
+          
+          if (!name || !url) return;
+
+          const { repos, projects, people } = await loadData();
+          projects[index].name = name;
+          projects[index].url = url;
+          await saveData(repos, projects, people);
+          
+          editingProject = null;
+          render();
+        });
+      });
+
+      // Remove buttons
       document.querySelectorAll('[data-remove-repo]').forEach(btn => {
         btn.addEventListener('click', async () => {
           const index = parseInt(btn.dataset.removeRepo);
-          const { repos, projects } = await loadData();
+          const { repos, projects, people } = await loadData();
           repos.splice(index, 1);
-          await saveData(repos, projects);
+          await saveData(repos, projects, people);
           render();
         });
       });
@@ -342,9 +514,19 @@
       document.querySelectorAll('[data-remove-project]').forEach(btn => {
         btn.addEventListener('click', async () => {
           const index = parseInt(btn.dataset.removeProject);
-          const { repos, projects } = await loadData();
+          const { repos, projects, people } = await loadData();
           projects.splice(index, 1);
-          await saveData(repos, projects);
+          await saveData(repos, projects, people);
+          render();
+        });
+      });
+
+      document.querySelectorAll('[data-remove-person]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const index = parseInt(btn.dataset.removePerson);
+          const { repos, projects, people } = await loadData();
+          people.splice(index, 1);
+          await saveData(repos, projects, people);
           render();
         });
       });
@@ -352,9 +534,9 @@
       document.querySelectorAll('[data-remove-view]').forEach(btn => {
         btn.addEventListener('click', async () => {
           const [projectIndex, viewIndex] = btn.dataset.removeView.split('-').map(Number);
-          const { repos, projects } = await loadData();
+          const { repos, projects, people } = await loadData();
           projects[projectIndex].views.splice(viewIndex, 1);
-          await saveData(repos, projects);
+          await saveData(repos, projects, people);
           render();
         });
       });
@@ -370,10 +552,10 @@
           
           if (!number || !name) return;
 
-          const { repos, projects } = await loadData();
+          const { repos, projects, people } = await loadData();
           if (!projects[projectIndex].views) projects[projectIndex].views = [];
           projects[projectIndex].views.push({ number: parseInt(number), name });
-          await saveData(repos, projects);
+          await saveData(repos, projects, people);
           
           numberInput.value = '';
           nameInput.value = '';
@@ -386,7 +568,7 @@
           const repoIndex = parseInt(checkbox.dataset.repoIndex);
           const tab = checkbox.dataset.tab;
           
-          const { repos, projects } = await loadData();
+          const { repos, projects, people } = await loadData();
           const repo = repos[repoIndex];
           
           if (!repo.tabs) repo.tabs = [];
@@ -399,24 +581,24 @@
             repo.tabs = repo.tabs.filter(t => t !== tab);
           }
           
-          await saveData(repos, projects);
+          await saveData(repos, projects, people);
         });
       });
     }
 
     document.getElementById('add-repo-btn').addEventListener('click', async () => {
       const input = document.getElementById('repo-input');
-      const name = input.value.trim();
+      const value = input.value.trim();
       
-      if (!name) return;
-      if (!name.includes('/')) {
+      if (!value) return;
+      if (!value.includes('/')) {
         alert('Please use format: owner/repo');
         return;
       }
 
-      const { repos, projects } = await loadData();
-      repos.push({ name, tabs: [] });
-      await saveData(repos, projects);
+      const { repos, projects, people } = await loadData();
+      repos.push({ repo: value, name: null, tabs: [] });
+      await saveData(repos, projects, people);
       
       input.value = '';
       render();
@@ -428,12 +610,26 @@
       
       if (!name || !url) return;
 
-      const { repos, projects } = await loadData();
+      const { repos, projects, people } = await loadData();
       projects.push({ name, url, views: [] });
-      await saveData(repos, projects);
+      await saveData(repos, projects, people);
       
       document.getElementById('project-name').value = '';
       document.getElementById('project-url').value = '';
+      render();
+    });
+
+    document.getElementById('add-people-btn').addEventListener('click', async () => {
+      const input = document.getElementById('people-input');
+      const username = input.value.trim();
+      
+      if (!username) return;
+
+      const { repos, projects, people } = await loadData();
+      people.push(username);
+      await saveData(repos, projects, people);
+      
+      input.value = '';
       render();
     });
 
@@ -446,6 +642,12 @@
     document.getElementById('project-url').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         document.getElementById('add-project-btn').click();
+      }
+    });
+
+    document.getElementById('people-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('add-people-btn').click();
       }
     });
 
