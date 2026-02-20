@@ -1,7 +1,9 @@
 export default defineContentScript({
   matches: ['https://github.com/*'],
   main() {
-    console.log('[GitHub UI Extension] Starting...');
+    console.log('%c[GitHub UI Extension] Extension loaded!', 'color: #238636; font-weight: bold; font-size: 14px');
+    console.log('[GitHub UI Extension] URL:', window.location.href);
+    console.log('[GitHub UI Extension] Ready state:', document.readyState);
     
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initExtension);
@@ -12,22 +14,27 @@ export default defineContentScript({
 });
 
 async function initExtension() {
-  console.log('[GitHub UI Extension] Initializing...');
+  console.log('%c[GitHub UI Extension] Initializing...', 'color: #58a6ff; font-weight: bold');
   
-  // Wait for sidebar to load - it's dynamically rendered
-  const sidebar = await waitForSidebar();
-  if (!sidebar) {
-    console.error('[GitHub UI Extension] Could not find sidebar');
+  // Only run on the dashboard/homepage
+  if (!window.location.pathname.match(/^\/?$/)) {
+    console.log('[GitHub UI Extension] Not on homepage, skipping');
     return;
   }
   
-  console.log('[GitHub UI Extension] Sidebar found:', sidebar);
+  const sidebar = await waitForSidebar();
+  if (!sidebar) {
+    console.error('%c[GitHub UI Extension] Could not find sidebar after 10 seconds', 'color: #f85149; font-weight: bold');
+    return;
+  }
+  
+  console.log('%c[GitHub UI Extension] Sidebar found!', 'color: #238636; font-weight: bold', sidebar);
   
   const savedRepos = await loadSavedRepositories();
   console.log('[GitHub UI Extension] Loaded repos:', savedRepos);
   
   injectCustomReposSection(sidebar, savedRepos);
-  console.log('[GitHub UI Extension] Extension loaded successfully!');
+  console.log('%c[GitHub UI Extension] ✓ Successfully injected!', 'color: #238636; font-weight: bold; font-size: 16px');
 }
 
 async function waitForSidebar() {
