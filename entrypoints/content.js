@@ -4,10 +4,11 @@ export default defineContentScript({
     console.log('[GitHub UI Extension] Content script loaded');
 
     async function loadData() {
-      const result = await chrome.storage.sync.get(['repos', 'projects']);
+      const result = await chrome.storage.sync.get(['repos', 'projects', 'people']);
       return {
         repos: result.repos || [],
-        projects: result.projects || []
+        projects: result.projects || [],
+        people: result.people || []
       };
     }
 
@@ -32,7 +33,7 @@ export default defineContentScript({
       }
 
       const sidebar = await waitForSidebar();
-      const { repos, projects } = await loadData();
+      const { repos, projects, people } = await loadData();
 
       const existing = document.getElementById('github-ui-ext-section');
       if (existing) existing.remove();
@@ -61,12 +62,15 @@ export default defineContentScript({
         html += '<h3 style="font-size: 11px; font-weight: 700; margin: 0 0 10px 0; color: #7d8590; text-transform: uppercase; letter-spacing: 0.8px;">Repositories</h3>';
         
         repos.forEach(repo => {
+          const displayName = repo.name || repo.repo;
+          const repoPath = repo.repo;
+          
           html += `
             <div style="margin-bottom: 12px;">
-              <a href="https://github.com/${repo.name}" 
+              <a href="https://github.com/${repoPath}" 
                  style="color: #58a6ff; text-decoration: none; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; padding: 6px 0; transition: color 0.2s;">
                 <span style="opacity: 0.7;">→</span>
-                ${repo.name}
+                ${displayName}
               </a>
           `;
           
@@ -74,7 +78,7 @@ export default defineContentScript({
             html += '<div style="margin-left: 20px; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px;">';
             repo.tabs.forEach(tab => {
               html += `
-                <a href="https://github.com/${repo.name}/${tab}" 
+                <a href="https://github.com/${repoPath}/${tab}" 
                    style="color: #8b949e; background: #21262d; text-decoration: none; font-size: 11px; padding: 3px 8px; border-radius: 12px; display: inline-block; border: 1px solid #30363d; transition: all 0.2s;">
                   ${tab}
                 </a>
@@ -91,7 +95,7 @@ export default defineContentScript({
 
       // Projects
       if (projects.length > 0) {
-        html += '<div>';
+        html += '<div style="margin-bottom: 20px;">';
         html += '<h3 style="font-size: 11px; font-weight: 700; margin: 0 0 10px 0; color: #7d8590; text-transform: uppercase; letter-spacing: 0.8px;">Projects</h3>';
         
         projects.forEach(project => {
@@ -125,11 +129,29 @@ export default defineContentScript({
         html += '</div>';
       }
 
-      if (repos.length === 0 && projects.length === 0) {
+      // People
+      if (people.length > 0) {
+        html += '<div>';
+        html += '<h3 style="font-size: 11px; font-weight: 700; margin: 0 0 10px 0; color: #7d8590; text-transform: uppercase; letter-spacing: 0.8px;">People</h3>';
+        html += '<div style="display: flex; flex-wrap: wrap; gap: 6px;">';
+        
+        people.forEach(username => {
+          html += `
+            <a href="https://github.com/${username}" 
+               style="color: #8b949e; background: #21262d; text-decoration: none; font-size: 11px; padding: 4px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #30363d; transition: all 0.2s;">
+              <span style="opacity: 0.6;">@</span>${username}
+            </a>
+          `;
+        });
+        
+        html += '</div></div>';
+      }
+
+      if (repos.length === 0 && projects.length === 0 && people.length === 0) {
         html += `
           <div style="text-align: center; padding: 20px 0;">
             <div style="font-size: 32px; margin-bottom: 8px; opacity: 0.3;">📍</div>
-            <p style="font-size: 13px; color: #7d8590; margin: 0;">Click the extension icon to pin<br>repositories and projects!</p>
+            <p style="font-size: 13px; color: #7d8590; margin: 0;">Click the extension icon to pin<br>repositories, projects, and people!</p>
           </div>
         `;
       }
@@ -165,7 +187,7 @@ export default defineContentScript({
     }
 
     chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === 'sync' && (changes.repos || changes.projects)) {
+      if (area === 'sync' && (changes.repos || changes.projects || changes.people)) {
         injectCustomSection();
       }
     });
