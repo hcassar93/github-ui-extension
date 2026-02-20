@@ -8,7 +8,8 @@ export default defineConfig({
     permissions: [
       'storage',
       'tabs',
-      'webRequest'
+      'webRequest',
+      'webRequestBlocking'
     ],
     host_permissions: [
       'https://github.com/*'
