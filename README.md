@@ -31,12 +31,12 @@ npm run build
 1. Go to `chrome://extensions/` (or `edge://extensions/`)
 2. Enable "Developer mode" (toggle in top right)
 3. Click "Load unpacked"
-4. Select the `.output/chrome-mv3` folder
+4. Select the `dist/chrome-mv3` folder
 
 **Firefox:**
 1. Go to `about:debugging#/runtime/this-firefox`
 2. Click "Load Temporary Add-on"
-3. Select any file in the `.output/firefox-mv2` folder
+3. Select any file in the `dist/firefox-mv2` folder
 
 ### 3. Use It
 

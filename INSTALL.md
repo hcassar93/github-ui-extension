@@ -14,7 +14,7 @@
    - Go to `chrome://extensions/`
    - Turn on "Developer mode" (top right toggle)
    - Click "Load unpacked"
-   - Select the `.output/chrome-mv3` folder from this project
+   - Select the `dist/chrome-mv3` folder from this project
 
 3. **Use it**
    - Visit github.com
