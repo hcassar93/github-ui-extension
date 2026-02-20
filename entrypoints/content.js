@@ -223,6 +223,7 @@ function initModalSystem() {
       background: var(--bgColor-default);
       color: var(--fgColor-default);
       font-weight: 600;
+      border-bottom: 2px solid var(--color-accent-emphasis);
     }
     
     .github-ui-ext-tab-title {
@@ -240,6 +241,8 @@ function initModalSystem() {
       align-items: center;
       justify-content: center;
       color: var(--fgColor-muted);
+      font-size: 18px;
+      line-height: 1;
     }
     
     .github-ui-ext-tab-close:hover {
@@ -250,6 +253,7 @@ function initModalSystem() {
     #github-ui-ext-iframe-container {
       flex: 1;
       position: relative;
+      background: white;
     }
     
     .github-ui-ext-iframe {
@@ -257,6 +261,9 @@ function initModalSystem() {
       height: 100%;
       border: none;
       display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
     }
     
     .github-ui-ext-iframe.active {
@@ -265,18 +272,30 @@ function initModalSystem() {
   `;
   document.head.appendChild(style);
   
-  // Intercept clicks on marked links
-  document.addEventListener('click', async (e) => {
-    const link = e.target.closest('a[data-modal-link]');
-    if (!link) return;
-    
-    const { modalMode } = await loadData();
-    if (!modalMode) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
+  // More aggressive click interception
+  document.addEventListener('click', handleModalClick, true);
+  document.addEventListener('mousedown', handleModalClick, true);
+}
+
+async function handleModalClick(e) {
+  const link = e.target.closest('a[data-modal-link]');
+  if (!link) return;
+  
+  const { modalMode } = await loadData();
+  if (!modalMode) return;
+  
+  e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+  
+  // If this is the first modal open, load ALL tabs
+  if (!modalState.container) {
+    await openModalWithAllTabs(link.href);
+  } else {
     openInModal(link.href, link.textContent.trim());
-  }, true);
+  }
+  
+  return false;
 }
 
 const modalState = {
@@ -284,6 +303,56 @@ const modalState = {
   activeTab: null,
   container: null
 };
+
+async function openModalWithAllTabs(activeUrl) {
+  const { pinnedRepos, projects } = await loadData();
+  
+  createModalContainer();
+  
+  // Create tabs for all repos
+  pinnedRepos.forEach(repo => {
+    const url = `https://github.com/${repo}`;
+    const tabId = `tab-${Date.now()}-${Math.random()}`;
+    const tab = {
+      id: tabId,
+      url,
+      title: repo.split('/')[1]
+    };
+    modalState.tabs.push(tab);
+    
+    // Set active tab to the one clicked
+    if (url === activeUrl) {
+      modalState.activeTab = tabId;
+    }
+  });
+  
+  // Create tabs for all projects
+  projects.forEach(project => {
+    const tabId = `tab-${Date.now()}-${Math.random()}`;
+    const tab = {
+      id: tabId,
+      url: project.url,
+      title: project.name
+    };
+    modalState.tabs.push(tab);
+    
+    if (project.url === activeUrl) {
+      modalState.activeTab = tabId;
+    }
+  });
+  
+  // If no active tab set, use first one
+  if (!modalState.activeTab && modalState.tabs.length > 0) {
+    modalState.activeTab = modalState.tabs[0].id;
+  }
+  
+  renderTabs();
+  
+  // Create all iframes (they'll load in background)
+  modalState.tabs.forEach(tab => {
+    createIframe(tab);
+  });
+}
 
 function openInModal(url, title) {
   if (!modalState.container) {
@@ -298,7 +367,7 @@ function openInModal(url, title) {
   }
   
   // Create new tab
-  const tabId = `tab-${Date.now()}`;
+  const tabId = `tab-${Date.now()}-${Math.random()}`;
   const tab = {
     id: tabId,
     url,
@@ -357,7 +426,7 @@ function createIframe(tab) {
   
   const iframe = document.createElement('iframe');
   iframe.id = `iframe-${tab.id}`;
-  iframe.className = 'github-ui-ext-iframe active';
+  iframe.className = `github-ui-ext-iframe ${tab.id === modalState.activeTab ? 'active' : ''}`;
   iframe.src = tab.url;
   container.appendChild(iframe);
 }
@@ -370,7 +439,10 @@ function switchToTab(tabId) {
   document.querySelectorAll('.github-ui-ext-iframe').forEach(iframe => {
     iframe.classList.remove('active');
   });
-  document.getElementById(`iframe-tab-${tabId}`)?.classList.add('active');
+  const activeIframe = document.getElementById(`iframe-${tabId}`);
+  if (activeIframe) {
+    activeIframe.classList.add('active');
+  }
 }
 
 function closeTab(tabId) {
@@ -389,5 +461,6 @@ function closeTab(tabId) {
       modalState.activeTab = modalState.tabs[Math.max(0, index - 1)].id;
     }
     renderTabs();
+    switchToTab(modalState.activeTab);
   }
 }
