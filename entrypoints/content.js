@@ -1,7 +1,7 @@
 export default defineContentScript({
   matches: ['https://github.com/*'],
   main() {
-    console.log('GitHub UI Extension loaded');
+    console.log('[GitHub UI Extension] Starting...');
     
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initExtension);
@@ -12,15 +12,35 @@ export default defineContentScript({
 });
 
 async function initExtension() {
-  const savedRepos = await loadSavedRepositories();
-  const sidebar = document.querySelector('[data-hpc]');
+  console.log('[GitHub UI Extension] Initializing...');
   
+  // Wait for sidebar to load - it's dynamically rendered
+  const sidebar = await waitForSidebar();
   if (!sidebar) {
-    setTimeout(initExtension, 1000);
+    console.error('[GitHub UI Extension] Could not find sidebar');
     return;
   }
-
+  
+  console.log('[GitHub UI Extension] Sidebar found:', sidebar);
+  
+  const savedRepos = await loadSavedRepositories();
+  console.log('[GitHub UI Extension] Loaded repos:', savedRepos);
+  
   injectCustomReposSection(sidebar, savedRepos);
+  console.log('[GitHub UI Extension] Extension loaded successfully!');
+}
+
+async function waitForSidebar() {
+  // The sidebar has class "feed-left-sidebar" or "dashboard-sidebar"
+  for (let i = 0; i < 20; i++) {
+    const sidebar = document.querySelector('.feed-left-sidebar') || 
+                   document.querySelector('.dashboard-sidebar');
+    
+    if (sidebar) return sidebar;
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  return null;
 }
 
 async function loadSavedRepositories() {
@@ -29,23 +49,18 @@ async function loadSavedRepositories() {
 }
 
 function injectCustomReposSection(sidebar, savedRepos) {
-  const repoSection = Array.from(sidebar.querySelectorAll('h2')).find(
-    h2 => h2.textContent?.includes('Top Repositories')
-  );
-  
-  if (!repoSection) return;
-  
-  const container = repoSection.closest('[data-hpc]') || repoSection.parentElement;
-  if (!container) return;
-
-  if (document.getElementById('github-ui-ext-custom-repos')) return;
+  // Check if already injected
+  if (document.getElementById('github-ui-ext-custom-repos')) {
+    console.log('[GitHub UI Extension] Already injected');
+    return;
+  }
 
   const customSection = document.createElement('div');
   customSection.id = 'github-ui-ext-custom-repos';
   customSection.innerHTML = `
     <style>
       #github-ui-ext-custom-repos {
-        margin-bottom: 16px;
+        margin: 16px;
         border: 1px solid var(--borderColor-default);
         border-radius: 6px;
         padding: 16px;
@@ -107,6 +122,7 @@ function injectCustomReposSection(sidebar, savedRepos) {
         font-size: 12px;
         text-align: center;
         padding: 20px;
+        line-height: 1.5;
       }
       
       #github-ui-ext-modal {
@@ -150,6 +166,7 @@ function injectCustomReposSection(sidebar, savedRepos) {
         background: var(--bgColor-muted);
         padding: 2px 6px;
         border-radius: 3px;
+        font-family: monospace;
       }
       
       .github-ui-ext-textarea {
@@ -234,12 +251,20 @@ function injectCustomReposSection(sidebar, savedRepos) {
     });
   }
 
-  container.parentElement?.insertBefore(customSection, container);
+  // Insert at the top of the sidebar
+  const firstChild = sidebar.querySelector('.d-flex, .tmp-px-3, div');
+  if (firstChild && firstChild.parentElement) {
+    firstChild.parentElement.insertBefore(customSection, firstChild);
+  } else {
+    sidebar.prepend(customSection);
+  }
 
   customSection.querySelector('.github-ui-ext-edit-btn').addEventListener('click', openEditModal);
 }
 
 function openEditModal() {
+  console.log('[GitHub UI Extension] Opening edit modal');
+  
   const overlay = document.createElement('div');
   overlay.id = 'github-ui-ext-modal';
   
@@ -280,6 +305,7 @@ vercel/next.js"></textarea>
       .map(line => line.trim())
       .filter(line => line && line.includes('/'));
 
+    console.log('[GitHub UI Extension] Saving repos:', repoStrings);
     await chrome.storage.sync.set({ pinnedRepos: repoStrings });
     overlay.remove();
     location.reload();
