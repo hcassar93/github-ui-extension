@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <style>
     body {
-      width: 400px;
-      min-height: 500px;
+      width: 450px;
+      min-height: 600px;
       margin: 0;
       padding: 20px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -74,6 +74,8 @@
       background: #da3633;
       border-color: #da3633;
       color: white;
+      font-size: 11px;
+      padding: 4px 8px;
     }
 
     .btn-danger:hover {
@@ -81,30 +83,40 @@
       border-color: #f85149;
     }
 
-    .repo-list {
+    .item-list {
       border: 1px solid #30363d;
       border-radius: 6px;
       background: #010409;
-      max-height: 200px;
+      max-height: 180px;
       overflow-y: auto;
     }
 
-    .repo-item {
+    .item {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 10px 12px;
       border-bottom: 1px solid #21262d;
+      gap: 8px;
     }
 
-    .repo-item:last-child {
+    .item:last-child {
       border-bottom: none;
     }
 
-    .repo-name {
+    .item-name {
       font-family: monospace;
       font-size: 13px;
       color: #58a6ff;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .project-name {
+      color: #a371f7;
+      font-weight: 500;
     }
 
     .empty-state {
@@ -138,6 +150,59 @@
 
     input::placeholder {
       color: #6e7681;
+    }
+
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .toggle-label {
+      font-size: 13px;
+      color: #c9d1d9;
+    }
+
+    .toggle-description {
+      font-size: 11px;
+      color: #8b949e;
+      margin-top: 2px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      background: #21262d;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid #30363d;
+      transition: background 0.2s;
+    }
+
+    .toggle-switch.active {
+      background: #238636;
+      border-color: #238636;
+    }
+
+    .toggle-knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      background: white;
+      border-radius: 50%;
+      transition: left 0.2s;
+    }
+
+    .toggle-switch.active .toggle-knob {
+      left: 20px;
     }
 
     .status {
@@ -185,6 +250,22 @@
 
   <div class="section">
     <div class="section-header">
+      <div class="section-title">Settings</div>
+    </div>
+    
+    <div class="toggle-container">
+      <div>
+        <div class="toggle-label">Open links in modal tabs</div>
+        <div class="toggle-description">Use iframe tabs instead of navigation</div>
+      </div>
+      <div class="toggle-switch" id="modal-toggle">
+        <div class="toggle-knob"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
       <div class="section-title">Pinned Repositories</div>
     </div>
     
@@ -193,17 +274,24 @@
       <button class="btn btn-primary" id="add-repo">Add</button>
     </div>
 
-    <div id="repo-list" class="repo-list">
+    <div id="repo-list" class="item-list">
       <div class="empty-state">No pinned repositories yet</div>
     </div>
   </div>
 
   <div class="section">
     <div class="section-header">
-      <div class="section-title">Projects (Coming Soon)</div>
+      <div class="section-title">Projects</div>
     </div>
-    <div class="repo-list">
-      <div class="empty-state">Project grouping coming in v0.2.0</div>
+    
+    <div class="input-group">
+      <input type="text" id="project-name-input" placeholder="Project name">
+      <input type="text" id="project-url-input" placeholder="URL or owner/repo">
+      <button class="btn btn-primary" id="add-project">Add</button>
+    </div>
+
+    <div id="project-list" class="item-list">
+      <div class="empty-state">No projects yet</div>
     </div>
   </div>
 
@@ -215,23 +303,51 @@
   </div>
 
   <script type="module">
-    // Load and display repos when popup opens
     document.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
       loadRepos();
+      loadProjects();
       
+      document.getElementById('modal-toggle').addEventListener('click', toggleModalMode);
       document.getElementById('add-repo').addEventListener('click', addRepo);
+      document.getElementById('add-project').addEventListener('click', addProject);
+      
       document.getElementById('repo-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          addRepo();
-        }
+        if (e.key === 'Enter') addRepo();
+      });
+      
+      document.getElementById('project-url-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addProject();
       });
     });
+
+    async function loadSettings() {
+      const result = await chrome.storage.sync.get(['modalMode']);
+      const toggle = document.getElementById('modal-toggle');
+      if (result.modalMode) {
+        toggle.classList.add('active');
+      }
+    }
+
+    async function toggleModalMode() {
+      const toggle = document.getElementById('modal-toggle');
+      const isActive = toggle.classList.toggle('active');
+      
+      await chrome.storage.sync.set({ modalMode: isActive });
+      showStatus(isActive ? 'Modal mode enabled' : 'Modal mode disabled', 'success');
+      refreshGitHubTabs();
+    }
 
     async function loadRepos() {
       const result = await chrome.storage.sync.get(['pinnedRepos']);
       const repos = result.pinnedRepos || [];
-      
       displayRepos(repos);
+    }
+
+    async function loadProjects() {
+      const result = await chrome.storage.sync.get(['projects']);
+      const projects = result.projects || [];
+      displayProjects(projects);
     }
 
     function displayRepos(repos) {
@@ -246,14 +362,37 @@
       
       repos.forEach(repo => {
         const item = document.createElement('div');
-        item.className = 'repo-item';
+        item.className = 'item';
         item.innerHTML = `
-          <span class="repo-name">${repo}</span>
-          <button class="btn btn-danger" data-repo="${repo}">Remove</button>
+          <span class="item-name">${repo}</span>
+          <button class="btn btn-danger">Remove</button>
         `;
         
         item.querySelector('button').addEventListener('click', () => removeRepo(repo));
         repoList.appendChild(item);
+      });
+    }
+
+    function displayProjects(projects) {
+      const projectList = document.getElementById('project-list');
+      
+      if (projects.length === 0) {
+        projectList.innerHTML = '<div class="empty-state">No projects yet</div>';
+        return;
+      }
+      
+      projectList.innerHTML = '';
+      
+      projects.forEach(project => {
+        const item = document.createElement('div');
+        item.className = 'item';
+        item.innerHTML = `
+          <span class="item-name project-name">${project.name}</span>
+          <button class="btn btn-danger">Remove</button>
+        `;
+        
+        item.querySelector('button').addEventListener('click', () => removeProject(project.name));
+        projectList.appendChild(item);
       });
     }
 
@@ -271,12 +410,6 @@
         return;
       }
       
-      const [owner, repo] = repoString.split('/');
-      if (!owner || !repo) {
-        showStatus('Invalid repository format', 'error');
-        return;
-      }
-      
       const result = await chrome.storage.sync.get(['pinnedRepos']);
       const repos = result.pinnedRepos || [];
       
@@ -291,8 +424,45 @@
       input.value = '';
       displayRepos(repos);
       showStatus('Repository added!', 'success');
+      refreshGitHubTabs();
+    }
+
+    async function addProject() {
+      const nameInput = document.getElementById('project-name-input');
+      const urlInput = document.getElementById('project-url-input');
       
-      // Reload GitHub tabs to show the change
+      const name = nameInput.value.trim();
+      const url = urlInput.value.trim();
+      
+      if (!name || !url) {
+        showStatus('Please enter both name and URL', 'error');
+        return;
+      }
+      
+      // Convert owner/repo format to full URL if needed
+      let fullUrl = url;
+      if (!url.startsWith('http') && url.includes('/')) {
+        fullUrl = `https://github.com/${url}`;
+      } else if (!url.startsWith('http')) {
+        showStatus('URL should be a full URL or owner/repo format', 'error');
+        return;
+      }
+      
+      const result = await chrome.storage.sync.get(['projects']);
+      const projects = result.projects || [];
+      
+      if (projects.some(p => p.name === name)) {
+        showStatus('Project name already exists', 'error');
+        return;
+      }
+      
+      projects.push({ name, url: fullUrl });
+      await chrome.storage.sync.set({ projects });
+      
+      nameInput.value = '';
+      urlInput.value = '';
+      displayProjects(projects);
+      showStatus('Project added!', 'success');
       refreshGitHubTabs();
     }
 
@@ -305,8 +475,18 @@
       
       displayRepos(filtered);
       showStatus('Repository removed', 'success');
+      refreshGitHubTabs();
+    }
+
+    async function removeProject(projectName) {
+      const result = await chrome.storage.sync.get(['projects']);
+      const projects = result.projects || [];
       
-      // Reload GitHub tabs to show the change
+      const filtered = projects.filter(p => p.name !== projectName);
+      await chrome.storage.sync.set({ projects: filtered });
+      
+      displayProjects(filtered);
+      showStatus('Project removed', 'success');
       refreshGitHubTabs();
     }
 
