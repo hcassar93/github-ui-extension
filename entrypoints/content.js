@@ -12,10 +12,8 @@ export default defineContentScript({
 });
 
 async function init() {
-  // Always initialize modal system
   initModalSystem();
   
-  // Only inject sidebar on homepage
   if (window.location.pathname.match(/^\/?$/)) {
     await injectSidebar();
   }
@@ -86,7 +84,7 @@ function injectCustomSection(sidebar, repos, projects) {
         text-decoration: none;
         color: var(--fgColor-default);
         font-size: 13px;
-        transition: background 0.2s;
+        transition: background 0.15s ease;
         cursor: pointer;
       }
       
@@ -172,14 +170,135 @@ function injectCustomSection(sidebar, repos, projects) {
   }
 }
 
-// Modal Tab System - Using Real Chrome Tabs
+// SPA-Style Modal System
+const modalState = {
+  tabs: [],
+  activeTab: null,
+  container: null
+};
+
 function initModalSystem() {
-  // Intercept clicks on marked links
-  document.addEventListener('click', handleModalClick, true);
-  document.addEventListener('mousedown', handleModalClick, true);
+  const style = document.createElement('style');
+  style.textContent = `
+    #github-ui-ext-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bgColor-default);
+      z-index: 999999;
+      display: flex;
+      flex-direction: column;
+      animation: fadeIn 0.15s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    #github-ui-ext-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bgColor-muted);
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--borderColor-default);
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+    
+    .github-ui-ext-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--bgColor-inset);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--fgColor-muted);
+      min-width: 100px;
+      max-width: 160px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    
+    .github-ui-ext-tab:hover {
+      background: var(--bgColor-default);
+      border-color: var(--borderColor-default);
+      color: var(--fgColor-default);
+    }
+    
+    .github-ui-ext-tab.active {
+      background: var(--bgColor-default);
+      border-color: var(--borderColor-emphasis);
+      color: var(--fgColor-default);
+      font-weight: 600;
+    }
+    
+    .github-ui-ext-tab-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .github-ui-ext-tab-close {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--fgColor-muted);
+      font-size: 18px;
+      line-height: 1;
+      transition: all 0.15s ease;
+    }
+    
+    .github-ui-ext-tab-close:hover {
+      background: var(--bgColor-danger-emphasis);
+      color: var(--fgColor-onEmphasis);
+    }
+    
+    #github-ui-ext-iframes {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .github-ui-ext-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s ease;
+    }
+    
+    .github-ui-ext-iframe.active {
+      opacity: 1;
+      visibility: visible;
+      z-index: 1;
+    }
+    
+    .github-ui-ext-iframe.preloading {
+      pointer-events: none;
+    }
+  `;
+  document.head.appendChild(style);
+  
+  document.addEventListener('click', handleClick, true);
+  document.addEventListener('mousedown', handleClick, true);
 }
 
-async function handleModalClick(e) {
+async function handleClick(e) {
   const link = e.target.closest('a[data-modal-link]');
   if (!link) return;
   
@@ -190,11 +309,133 @@ async function handleModalClick(e) {
   e.stopPropagation();
   e.stopImmediatePropagation();
   
-  // Open in new tab
-  await chrome.runtime.sendMessage({
-    type: 'OPEN_TAB',
-    url: link.href
-  });
+  if (!modalState.container) {
+    await openModal(link.href);
+  } else {
+    const tab = modalState.tabs.find(t => t.url === link.href);
+    if (tab) switchTab(tab.id);
+  }
   
   return false;
+}
+
+async function openModal(clickedUrl) {
+  const { pinnedRepos, projects } = await loadData();
+  
+  // Create container
+  modalState.container = document.createElement('div');
+  modalState.container.id = 'github-ui-ext-modal';
+  modalState.container.innerHTML = `
+    <div id="github-ui-ext-tabs"></div>
+    <div id="github-ui-ext-iframes"></div>
+  `;
+  document.body.appendChild(modalState.container);
+  
+  // Create tabs
+  modalState.tabs = [];
+  
+  pinnedRepos.forEach(repo => {
+    const url = `https://github.com/${repo}`;
+    modalState.tabs.push({
+      id: `repo-${repo.replace('/', '-')}`,
+      url,
+      title: repo.split('/')[1] || repo
+    });
+    if (url === clickedUrl) modalState.activeTab = modalState.tabs[modalState.tabs.length - 1].id;
+  });
+  
+  projects.forEach(project => {
+    modalState.tabs.push({
+      id: `proj-${project.name.replace(/\s+/g, '-')}`,
+      url: project.url,
+      title: project.name
+    });
+    if (project.url === clickedUrl) modalState.activeTab = modalState.tabs[modalState.tabs.length - 1].id;
+  });
+  
+  if (!modalState.activeTab && modalState.tabs.length > 0) {
+    modalState.activeTab = modalState.tabs[0].id;
+  }
+  
+  renderTabs();
+  createIframes();
+}
+
+function renderTabs() {
+  const container = document.getElementById('github-ui-ext-tabs');
+  if (!container) return;
+  
+  container.innerHTML = modalState.tabs.map(tab => `
+    <div class="github-ui-ext-tab ${tab.id === modalState.activeTab ? 'active' : ''}" data-tab="${tab.id}">
+      <span class="github-ui-ext-tab-title">${tab.title}</span>
+      <span class="github-ui-ext-tab-close" data-close="${tab.id}">×</span>
+    </div>
+  `).join('');
+  
+  container.querySelectorAll('.github-ui-ext-tab').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (!e.target.closest('.github-ui-ext-tab-close')) {
+        switchTab(el.dataset.tab);
+      }
+    });
+  });
+  
+  container.querySelectorAll('.github-ui-ext-tab-close').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeTab(el.dataset.close);
+    });
+  });
+}
+
+function createIframes() {
+  const container = document.getElementById('github-ui-ext-iframes');
+  if (!container) return;
+  
+  modalState.tabs.forEach(tab => {
+    const iframe = document.createElement('iframe');
+    iframe.id = `iframe-${tab.id}`;
+    iframe.className = `github-ui-ext-iframe ${tab.id === modalState.activeTab ? 'active' : 'preloading'}`;
+    iframe.src = tab.url;
+    iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-popups-to-escape-sandbox';
+    container.appendChild(iframe);
+    
+    // Remove preloading class after load
+    iframe.addEventListener('load', () => {
+      iframe.classList.remove('preloading');
+    });
+  });
+}
+
+function switchTab(tabId) {
+  modalState.activeTab = tabId;
+  renderTabs();
+  
+  document.querySelectorAll('.github-ui-ext-iframe').forEach(iframe => {
+    iframe.classList.remove('active');
+  });
+  const active = document.getElementById(`iframe-${tabId}`);
+  if (active) active.classList.add('active');
+}
+
+function closeTab(tabId) {
+  const index = modalState.tabs.findIndex(t => t.id === tabId);
+  if (index === -1) return;
+  
+  modalState.tabs.splice(index, 1);
+  document.getElementById(`iframe-${tabId}`)?.remove();
+  
+  if (modalState.tabs.length === 0) {
+    modalState.container?.remove();
+    modalState.container = null;
+    modalState.activeTab = null;
+  } else {
+    if (modalState.activeTab === tabId) {
+      modalState.activeTab = modalState.tabs[Math.max(0, index - 1)].id;
+      renderTabs();
+      switchTab(modalState.activeTab);
+    } else {
+      renderTabs();
+    }
+  }
 }
