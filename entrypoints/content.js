@@ -40,74 +40,127 @@ export default defineContentScript({
       const section = document.createElement('div');
       section.id = 'github-ui-ext-section';
       section.style.cssText = `
-        background: #161b22;
+        background: linear-gradient(135deg, #1a1f2e 0%, #161b22 100%);
         border: 1px solid #30363d;
-        border-radius: 6px;
-        padding: 16px;
+        border-radius: 8px;
+        padding: 20px;
         margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       `;
 
-      let html = '<h2 style="font-size: 14px; font-weight: 600; margin: 0 0 12px 0; color: #c9d1d9;">Pinned</h2>';
+      let html = `
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+          <span style="font-size: 18px;">📌</span>
+          <h2 style="font-size: 15px; font-weight: 700; margin: 0; color: #e6edf3; letter-spacing: 0.3px;">PINNED</h2>
+        </div>
+      `;
 
       // Repositories
       if (repos.length > 0) {
-        html += '<h3 style="font-size: 12px; font-weight: 600; margin: 8px 0 6px 0; color: #8b949e; text-transform: uppercase;">Repositories</h3>';
-        html += '<ul style="list-style: none; margin: 0; padding: 0;">';
+        html += '<div style="margin-bottom: 20px;">';
+        html += '<h3 style="font-size: 11px; font-weight: 700; margin: 0 0 10px 0; color: #7d8590; text-transform: uppercase; letter-spacing: 0.8px;">Repositories</h3>';
         
         repos.forEach(repo => {
           html += `
-            <li style="margin-bottom: 8px;">
+            <div style="margin-bottom: 12px;">
               <a href="https://github.com/${repo.name}" 
-                 style="color: #58a6ff; text-decoration: none; font-size: 14px; display: block; padding: 4px 0; font-weight: 600;">
+                 style="color: #58a6ff; text-decoration: none; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; padding: 6px 0; transition: color 0.2s;">
+                <span style="opacity: 0.7;">→</span>
                 ${repo.name}
               </a>
           `;
           
           if (repo.tabs && repo.tabs.length > 0) {
-            html += '<ul style="list-style: none; margin: 4px 0 0 12px; padding: 0;">';
+            html += '<div style="margin-left: 20px; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px;">';
             repo.tabs.forEach(tab => {
               html += `
-                <li style="margin-bottom: 2px;">
-                  <a href="https://github.com/${repo.name}/${tab}" 
-                     style="color: #8b949e; text-decoration: none; font-size: 12px; display: block; padding: 2px 0;">
-                    → ${tab}
-                  </a>
-                </li>
+                <a href="https://github.com/${repo.name}/${tab}" 
+                   style="color: #8b949e; background: #21262d; text-decoration: none; font-size: 11px; padding: 3px 8px; border-radius: 12px; display: inline-block; border: 1px solid #30363d; transition: all 0.2s;">
+                  ${tab}
+                </a>
               `;
             });
-            html += '</ul>';
+            html += '</div>';
           }
           
-          html += '</li>';
+          html += '</div>';
         });
         
-        html += '</ul>';
+        html += '</div>';
       }
 
       // Projects
       if (projects.length > 0) {
-        html += '<h3 style="font-size: 12px; font-weight: 600; margin: 12px 0 6px 0; color: #8b949e; text-transform: uppercase;">Projects</h3>';
-        html += '<ul style="list-style: none; margin: 0; padding: 0;">';
+        html += '<div>';
+        html += '<h3 style="font-size: 11px; font-weight: 700; margin: 0 0 10px 0; color: #7d8590; text-transform: uppercase; letter-spacing: 0.8px;">Projects</h3>';
         
         projects.forEach(project => {
           html += `
-            <li style="margin-bottom: 6px;">
+            <div style="margin-bottom: 12px;">
               <a href="${project.url}" 
-                 style="color: #58a6ff; text-decoration: none; font-size: 14px; display: block; padding: 4px 0;">
+                 style="color: #58a6ff; text-decoration: none; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; padding: 6px 0; transition: color 0.2s;">
+                <span style="opacity: 0.7;">→</span>
                 ${project.name}
               </a>
-            </li>
           `;
+          
+          if (project.views && project.views.length > 0) {
+            html += '<div style="margin-left: 20px; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px;">';
+            project.views.forEach(view => {
+              const viewUrl = `${project.url}/views/${view.number}`;
+              html += `
+                <a href="${viewUrl}" 
+                   style="color: #8b949e; background: #21262d; text-decoration: none; font-size: 11px; padding: 3px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #30363d; transition: all 0.2s;">
+                  <span>${view.name}</span>
+                  <span style="opacity: 0.5; font-size: 10px;">#${view.number}</span>
+                </a>
+              `;
+            });
+            html += '</div>';
+          }
+          
+          html += '</div>';
         });
         
-        html += '</ul>';
+        html += '</div>';
       }
 
       if (repos.length === 0 && projects.length === 0) {
-        html += '<p style="font-size: 12px; color: #8b949e; margin: 0;">Click the extension icon to pin repositories and projects!</p>';
+        html += `
+          <div style="text-align: center; padding: 20px 0;">
+            <div style="font-size: 32px; margin-bottom: 8px; opacity: 0.3;">📍</div>
+            <p style="font-size: 13px; color: #7d8590; margin: 0;">Click the extension icon to pin<br>repositories and projects!</p>
+          </div>
+        `;
       }
 
       section.innerHTML = html;
+      
+      // Add hover effects
+      section.addEventListener('mouseover', (e) => {
+        const link = e.target.closest('a');
+        if (link) {
+          if (link.style.background) {
+            link.style.background = '#30363d';
+            link.style.color = '#e6edf3';
+          } else {
+            link.style.color = '#79c0ff';
+          }
+        }
+      });
+      
+      section.addEventListener('mouseout', (e) => {
+        const link = e.target.closest('a');
+        if (link) {
+          if (link.style.background) {
+            link.style.background = '#21262d';
+            link.style.color = '#8b949e';
+          } else {
+            link.style.color = '#58a6ff';
+          }
+        }
+      });
+
       sidebar.insertBefore(section, sidebar.firstChild);
     }
 
