@@ -1,79 +1,86 @@
 # GitHub UI Extension
 
-A Chrome extension that lets you customize the GitHub homepage with pinned repositories and projects. Stop struggling with GitHub's default layout - make it work for you!
+Make GitHub's homepage actually usable. Pin your most-used repos, customize the sidebar, and stop wasting time navigating.
+
+**Built with plain HTML, CSS, and JavaScript. No frameworks, no auth, no bullshit.**
 
 ## Features
 
-### Current (v0.1.0)
-- ✅ **Custom Pinned Repositories**: Pin your most-used repos directly on the sidebar
-- ✅ **Quick Access**: One-click access to your pinned repositories
-- ✅ **Easy Management**: Simple modal interface to add/remove repos
-- ✅ **Native GitHub Styling**: Seamlessly integrates with GitHub's design
+- ✅ Pin repositories to the sidebar
+- ✅ Quick access with one click
+- ✅ Simple edit modal
+- ✅ Uses GitHub's native styling
+- ✅ Works on any browser (Chrome, Firefox, Edge, etc.)
 
-### Planned
-- 🔄 **CLI Message Bus**: Local process integration for programmatic control
-- 🤖 **Coding Agent Integration**: Allow AI agents to push notifications/updates
-- 📊 **Project Grouping**: Organize repos into custom project categories
-- 🎨 **Custom Themes**: Personalize the appearance
-- 📈 **Analytics**: Track which repos you actually use
-- 🔍 **Quick Search**: Fast search across your pinned items
+## Installation
 
-## Installation (Unpacked/Local Development)
+This is for personal use - just load it unpacked.
 
-This extension is designed for personal use and runs as an unpacked extension. Here's how to get it running:
-
-### Step 1: Clone and Setup
+### 1. Clone and Build
 
 ```bash
-# Clone the repository
 git clone https://github.com/haydencassar/github-ui-extension.git
 cd github-ui-extension
-
-# Install dependencies
 npm install
-
-# Build the extension
 npm run build
 ```
 
-### Step 2: Load in Chrome
+### 2. Load in Your Browser
 
-1. Open Chrome and navigate to **`chrome://extensions/`**
-2. **Enable "Developer mode"** using the toggle in the top right corner
-3. Click **"Load unpacked"**
-4. Navigate to your project folder and select the **`.output/chrome-mv3`** directory
-5. Done! The extension is now loaded
+**Chrome/Edge:**
+1. Go to `chrome://extensions/` (or `edge://extensions/`)
+2. Enable "Developer mode" (toggle in top right)
+3. Click "Load unpacked"
+4. Select the `.output/chrome-mv3` folder
 
-### Step 3: Verify It's Working
+**Firefox:**
+1. Go to `about:debugging#/runtime/this-firefox`
+2. Click "Load Temporary Add-on"
+3. Select any file in the `.output/firefox-mv2` folder
 
-1. Go to **https://github.com**
-2. Look for a new **"📌 Pinned Repositories"** section in the left sidebar
-3. Click **"Edit"** to add your first repos (format: `owner/repo`, e.g., `facebook/react`)
-4. Save and enjoy your customized GitHub!
+### 3. Use It
 
-### Updating the Extension
+1. Go to github.com
+2. Look for "📌 Pinned Repositories" in the left sidebar
+3. Click "Edit" and add repos like: `facebook/react`, `microsoft/vscode`
+4. Done!
 
-When you make changes or pull updates:
+## Updating
 
 ```bash
-# Pull latest changes
 git pull
-
-# Rebuild
 npm run build
-
-# In Chrome, go to chrome://extensions/ and click the refresh icon on the extension card
+# Reload extension in browser
 ```
 
-### Development Mode (Hot Reload)
-
-If you want to modify the code and see changes instantly:
+## Development
 
 ```bash
-npm run dev
+npm run dev              # Chrome with hot reload
+npm run dev:firefox      # Firefox with hot reload
 ```
 
-This starts a development server. The extension will automatically reload when you save changes to the code. You still need to load it unpacked in Chrome as described above, but point to `.output/chrome-mv3` and it will auto-update as you code.
+## Future Plans
+
+- CLI message bus for local process integration
+- Project grouping
+- Drag-and-drop reordering
+- Integration with coding agents
+
+## Tech
+
+- **Framework:** [WXT](https://wxt.dev) - Cross-platform web extension framework
+- **Languages:** Plain JavaScript, HTML, CSS
+- **Storage:** Browser Storage API
+- **No dependencies, no auth, no tracking**
+
+## License
+
+MIT - Do whatever you want with it.
+
+---
+
+Built out of frustration with GitHub's UI. Open source because why not.
 
 ## Usage
 

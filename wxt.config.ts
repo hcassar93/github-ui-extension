@@ -1,7 +1,6 @@
 import { defineConfig } from 'wxt';
 
 export default defineConfig({
-  extensionApi: 'chrome',
   manifest: {
     name: 'GitHub UI Extension',
     description: 'Customize your GitHub homepage with pinned repositories and projects',
