@@ -7,8 +7,7 @@ export default defineConfig({
     description: 'Customize your GitHub homepage with pinned repositories and projects',
     permissions: [
       'storage',
-      'tabs',
-      'sidePanel'
+      'tabs'
     ],
     host_permissions: [
       'https://github.com/*'
@@ -16,9 +15,6 @@ export default defineConfig({
     action: {
       default_popup: 'popup.html',
       default_title: 'GitHub UI Extension'
-    },
-    side_panel: {
-      default_path: 'sidepanel.html'
     }
   },
 });

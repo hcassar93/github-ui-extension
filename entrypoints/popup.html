@@ -2,511 +2,323 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <title>GitHub UI Extension</title>
   <style>
-    body {
-      width: 450px;
-      min-height: 600px;
+    * {
       margin: 0;
-      padding: 20px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      font-size: 14px;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 500px;
+      max-height: 600px;
+      overflow-y: auto;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
       background: #0d1117;
       color: #c9d1d9;
+      padding: 16px;
     }
 
     h1 {
-      font-size: 18px;
-      margin: 0 0 8px 0;
+      font-size: 16px;
       font-weight: 600;
+      margin-bottom: 16px;
+      color: #c9d1d9;
     }
 
-    .subtitle {
+    h2 {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 16px 0 8px 0;
       color: #8b949e;
-      font-size: 12px;
-      margin-bottom: 20px;
     }
 
     .section {
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
 
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .section-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #f0f6fc;
-    }
-
-    .btn {
-      background: #21262d;
-      border: 1px solid #30363d;
-      color: #c9d1d9;
-      padding: 5px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      cursor: pointer;
-      font-weight: 500;
-    }
-
-    .btn:hover {
-      background: #30363d;
-      border-color: #8b949e;
-    }
-
-    .btn-primary {
-      background: #238636;
-      border-color: #238636;
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: #2ea043;
-      border-color: #2ea043;
-    }
-
-    .btn-danger {
-      background: #da3633;
-      border-color: #da3633;
-      color: white;
-      font-size: 11px;
-      padding: 4px 8px;
-    }
-
-    .btn-danger:hover {
-      background: #f85149;
-      border-color: #f85149;
-    }
-
-    .item-list {
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      background: #010409;
-      max-height: 180px;
-      overflow-y: auto;
-    }
-
-    .item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 12px;
-      border-bottom: 1px solid #21262d;
-      gap: 8px;
-    }
-
-    .item:last-child {
-      border-bottom: none;
-    }
-
-    .item-name {
-      font-family: monospace;
-      font-size: 13px;
-      color: #58a6ff;
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .project-name {
-      color: #a371f7;
-      font-weight: 500;
-    }
-
-    .empty-state {
-      padding: 30px;
-      text-align: center;
-      color: #8b949e;
-      font-size: 12px;
-    }
-
-    .input-group {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    input {
-      flex: 1;
+    input[type="text"] {
+      width: 100%;
+      padding: 8px 12px;
       background: #0d1117;
       border: 1px solid #30363d;
-      color: #c9d1d9;
-      padding: 8px 12px;
       border-radius: 6px;
-      font-size: 13px;
-      font-family: monospace;
+      color: #c9d1d9;
+      font-size: 14px;
+      margin-bottom: 8px;
     }
 
-    input:focus {
+    input[type="text"]:focus {
       outline: none;
       border-color: #58a6ff;
     }
 
-    input::placeholder {
-      color: #6e7681;
+    button {
+      padding: 8px 16px;
+      background: #238636;
+      border: 1px solid #2ea043;
+      border-radius: 6px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
     }
 
-    .toggle-container {
+    button:hover {
+      background: #2ea043;
+    }
+
+    .add-form {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px;
-      background: #0d1117;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .add-form input {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .item-list {
+      list-style: none;
+    }
+
+    .item {
+      background: #161b22;
       border: 1px solid #30363d;
       border-radius: 6px;
       margin-bottom: 8px;
-    }
-
-    .toggle-label {
-      font-size: 13px;
-      color: #c9d1d9;
-    }
-
-    .toggle-description {
-      font-size: 11px;
-      color: #8b949e;
-      margin-top: 2px;
-    }
-
-    .toggle-switch {
-      position: relative;
-      width: 42px;
-      height: 24px;
-      background: #21262d;
-      border-radius: 12px;
-      cursor: pointer;
-      border: 1px solid #30363d;
-      transition: background 0.2s;
-    }
-
-    .toggle-switch.active {
-      background: #238636;
-      border-color: #238636;
-    }
-
-    .toggle-knob {
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 18px;
-      height: 18px;
-      background: white;
-      border-radius: 50%;
-      transition: left 0.2s;
-    }
-
-    .toggle-switch.active .toggle-knob {
-      left: 20px;
-    }
-
-    .status {
-      margin-top: 16px;
       padding: 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      text-align: center;
     }
 
-    .status-success {
-      background: #1a2f1a;
-      border: 1px solid #238636;
-      color: #7ee787;
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
     }
 
-    .status-error {
-      background: #2f1a1a;
-      border: 1px solid #da3633;
+    .item-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .remove-btn {
+      background: transparent;
+      border: none;
+      color: #f85149;
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .remove-btn:hover {
       color: #ff7b72;
     }
 
-    .footer {
-      margin-top: 24px;
+    .tabs-section {
+      margin-top: 8px;
+    }
+
+    .tabs-label {
+      font-size: 12px;
+      color: #8b949e;
+      margin-bottom: 6px;
+    }
+
+    .tab-checkboxes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tab-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+    }
+
+    .tab-checkbox input {
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .tab-checkbox label {
+      cursor: pointer;
+    }
+
+    .project-inputs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .project-inputs input:first-child {
+      flex: 1;
+    }
+
+    .project-inputs input:last-child {
+      flex: 2;
+    }
+
+    .info {
+      font-size: 12px;
+      color: #8b949e;
+      margin-top: 20px;
       padding-top: 16px;
-      border-top: 1px solid #30363d;
-      text-align: center;
-      font-size: 11px;
-      color: #6e7681;
-    }
-
-    .footer a {
-      color: #58a6ff;
-      text-decoration: none;
-    }
-
-    .footer a:hover {
-      text-decoration: underline;
+      border-top: 1px solid #21262d;
     }
   </style>
 </head>
 <body>
-  <h1>📌 GitHub UI Extension</h1>
-  <p class="subtitle">Customize your GitHub homepage sidebar</p>
+  <h1>GitHub UI Extension</h1>
 
   <div class="section">
-    <div class="section-header">
-      <div class="section-title">Settings</div>
+    <h2>Pinned Repositories</h2>
+    <div class="add-form">
+      <input type="text" id="repo-input" placeholder="owner/repo">
+      <button onclick="addRepo()">Add</button>
     </div>
-    
-    <div class="toggle-container">
-      <div>
-        <div class="toggle-label">Open links in modal tabs</div>
-        <div class="toggle-description">Use iframe tabs instead of navigation</div>
-      </div>
-      <div class="toggle-switch" id="modal-toggle">
-        <div class="toggle-knob"></div>
-      </div>
-    </div>
+    <ul class="item-list" id="repo-list"></ul>
   </div>
 
   <div class="section">
-    <div class="section-header">
-      <div class="section-title">Pinned Repositories</div>
+    <h2>Projects</h2>
+    <div class="project-inputs">
+      <input type="text" id="project-name" placeholder="Name">
+      <input type="text" id="project-url" placeholder="URL">
     </div>
-    
-    <div class="input-group">
-      <input type="text" id="repo-input" placeholder="owner/repo (e.g., facebook/react)">
-      <button class="btn btn-primary" id="add-repo">Add</button>
-    </div>
-
-    <div id="repo-list" class="item-list">
-      <div class="empty-state">No pinned repositories yet</div>
-    </div>
+    <button onclick="addProject()" style="width: 100%; margin-bottom: 12px;">Add Project</button>
+    <ul class="item-list" id="project-list"></ul>
   </div>
 
-  <div class="section">
-    <div class="section-header">
-      <div class="section-title">Projects</div>
-    </div>
-    
-    <div class="input-group">
-      <input type="text" id="project-name-input" placeholder="Project name">
-      <input type="text" id="project-url-input" placeholder="URL or owner/repo">
-      <button class="btn btn-primary" id="add-project">Add</button>
-    </div>
-
-    <div id="project-list" class="item-list">
-      <div class="empty-state">No projects yet</div>
-    </div>
-  </div>
-
-  <div id="status"></div>
-
-  <div class="footer">
-    Made with frustration & coffee ☕<br>
-    <a href="https://github.com/haydencassar/github-ui-extension" target="_blank">View on GitHub</a>
+  <div class="info">
+    💡 Select which tabs you want quick links for. They'll appear in the sidebar.
   </div>
 
   <script type="module">
-    document.addEventListener('DOMContentLoaded', () => {
-      loadSettings();
-      loadRepos();
-      loadProjects();
-      
-      document.getElementById('modal-toggle').addEventListener('click', toggleModalMode);
-      document.getElementById('add-repo').addEventListener('click', addRepo);
-      document.getElementById('add-project').addEventListener('click', addProject);
-      
-      document.getElementById('repo-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') addRepo();
-      });
-      
-      document.getElementById('project-url-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') addProject();
-      });
-    });
+    const REPO_TABS = ['issues', 'pulls', 'actions', 'projects', 'security', 'insights', 'settings'];
 
-    async function loadSettings() {
-      const result = await chrome.storage.sync.get(['modalMode']);
-      const toggle = document.getElementById('modal-toggle');
-      if (result.modalMode) {
-        toggle.classList.add('active');
-      }
+    async function loadData() {
+      const data = await chrome.storage.sync.get(['repos', 'projects']);
+      return {
+        repos: data.repos || [],
+        projects: data.projects || []
+      };
     }
 
-    async function toggleModalMode() {
-      const toggle = document.getElementById('modal-toggle');
-      const isActive = toggle.classList.toggle('active');
+    async function saveData(repos, projects) {
+      await chrome.storage.sync.set({ repos, projects });
+      const tabs = await chrome.tabs.query({ url: 'https://github.com/*' });
+      tabs.forEach(tab => chrome.tabs.reload(tab.id));
+    }
+
+    async function render() {
+      const { repos, projects } = await loadData();
       
-      await chrome.storage.sync.set({ modalMode: isActive });
-      showStatus(isActive ? 'Modal mode enabled' : 'Modal mode disabled', 'success');
-      refreshGitHubTabs();
-    }
-
-    async function loadRepos() {
-      const result = await chrome.storage.sync.get(['pinnedRepos']);
-      const repos = result.pinnedRepos || [];
-      displayRepos(repos);
-    }
-
-    async function loadProjects() {
-      const result = await chrome.storage.sync.get(['projects']);
-      const projects = result.projects || [];
-      displayProjects(projects);
-    }
-
-    function displayRepos(repos) {
       const repoList = document.getElementById('repo-list');
-      
-      if (repos.length === 0) {
-        repoList.innerHTML = '<div class="empty-state">No pinned repositories yet</div>';
-        return;
-      }
-      
-      repoList.innerHTML = '';
-      
-      repos.forEach(repo => {
-        const item = document.createElement('div');
-        item.className = 'item';
-        item.innerHTML = `
-          <span class="item-name">${repo}</span>
-          <button class="btn btn-danger">Remove</button>
-        `;
-        
-        item.querySelector('button').addEventListener('click', () => removeRepo(repo));
-        repoList.appendChild(item);
-      });
-    }
+      repoList.innerHTML = repos.map((repo, index) => `
+        <li class="item">
+          <div class="item-header">
+            <span class="item-name">${repo.name}</span>
+            <button class="remove-btn" onclick="removeRepo(${index})">×</button>
+          </div>
+          <div class="tabs-section">
+            <div class="tabs-label">Quick links:</div>
+            <div class="tab-checkboxes">
+              ${REPO_TABS.map(tab => `
+                <div class="tab-checkbox">
+                  <input type="checkbox" id="repo-${index}-${tab}" 
+                         ${repo.tabs?.includes(tab) ? 'checked' : ''}
+                         onchange="toggleRepoTab(${index}, '${tab}')">
+                  <label for="repo-${index}-${tab}">${tab}</label>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </li>
+      `).join('') || '<li style="color: #8b949e; font-size: 12px; padding: 8px 0;">No repositories pinned</li>';
 
-    function displayProjects(projects) {
       const projectList = document.getElementById('project-list');
-      
-      if (projects.length === 0) {
-        projectList.innerHTML = '<div class="empty-state">No projects yet</div>';
-        return;
-      }
-      
-      projectList.innerHTML = '';
-      
-      projects.forEach(project => {
-        const item = document.createElement('div');
-        item.className = 'item';
-        item.innerHTML = `
-          <span class="item-name project-name">${project.name}</span>
-          <button class="btn btn-danger">Remove</button>
-        `;
-        
-        item.querySelector('button').addEventListener('click', () => removeProject(project.name));
-        projectList.appendChild(item);
-      });
+      projectList.innerHTML = projects.map((project, index) => `
+        <li class="item">
+          <div class="item-header">
+            <div>
+              <div class="item-name">${project.name}</div>
+              <div style="font-size: 11px; color: #8b949e; margin-top: 2px;">${project.url}</div>
+            </div>
+            <button class="remove-btn" onclick="removeProject(${index})">×</button>
+          </div>
+        </li>
+      `).join('') || '<li style="color: #8b949e; font-size: 12px; padding: 8px 0;">No projects added</li>';
     }
 
-    async function addRepo() {
+    window.addRepo = async function() {
       const input = document.getElementById('repo-input');
-      const repoString = input.value.trim();
+      const name = input.value.trim();
       
-      if (!repoString) {
-        showStatus('Please enter a repository', 'error');
+      if (!name) return;
+      if (!name.includes('/')) {
+        alert('Please use format: owner/repo');
         return;
       }
-      
-      if (!repoString.includes('/')) {
-        showStatus('Format should be: owner/repo', 'error');
-        return;
-      }
-      
-      const result = await chrome.storage.sync.get(['pinnedRepos']);
-      const repos = result.pinnedRepos || [];
-      
-      if (repos.includes(repoString)) {
-        showStatus('Repository already pinned', 'error');
-        return;
-      }
-      
-      repos.push(repoString);
-      await chrome.storage.sync.set({ pinnedRepos: repos });
+
+      const { repos, projects } = await loadData();
+      repos.push({ name, tabs: [] });
+      await saveData(repos, projects);
       
       input.value = '';
-      displayRepos(repos);
-      showStatus('Repository added!', 'success');
-      refreshGitHubTabs();
-    }
+      render();
+    };
 
-    async function addProject() {
-      const nameInput = document.getElementById('project-name-input');
-      const urlInput = document.getElementById('project-url-input');
+    window.removeRepo = async function(index) {
+      const { repos, projects } = await loadData();
+      repos.splice(index, 1);
+      await saveData(repos, projects);
+      render();
+    };
+
+    window.toggleRepoTab = async function(repoIndex, tab) {
+      const { repos, projects } = await loadData();
+      const repo = repos[repoIndex];
       
-      const name = nameInput.value.trim();
-      const url = urlInput.value.trim();
+      if (!repo.tabs) repo.tabs = [];
       
-      if (!name || !url) {
-        showStatus('Please enter both name and URL', 'error');
-        return;
+      if (repo.tabs.includes(tab)) {
+        repo.tabs = repo.tabs.filter(t => t !== tab);
+      } else {
+        repo.tabs.push(tab);
       }
       
-      // Convert owner/repo format to full URL if needed
-      let fullUrl = url;
-      if (!url.startsWith('http') && url.includes('/')) {
-        fullUrl = `https://github.com/${url}`;
-      } else if (!url.startsWith('http')) {
-        showStatus('URL should be a full URL or owner/repo format', 'error');
-        return;
-      }
-      
-      const result = await chrome.storage.sync.get(['projects']);
-      const projects = result.projects || [];
-      
-      if (projects.some(p => p.name === name)) {
-        showStatus('Project name already exists', 'error');
-        return;
-      }
-      
-      projects.push({ name, url: fullUrl });
-      await chrome.storage.sync.set({ projects });
-      
-      nameInput.value = '';
-      urlInput.value = '';
-      displayProjects(projects);
-      showStatus('Project added!', 'success');
-      refreshGitHubTabs();
-    }
+      await saveData(repos, projects);
+    };
 
-    async function removeRepo(repoToRemove) {
-      const result = await chrome.storage.sync.get(['pinnedRepos']);
-      const repos = result.pinnedRepos || [];
+    window.addProject = async function() {
+      const name = document.getElementById('project-name').value.trim();
+      const url = document.getElementById('project-url').value.trim();
       
-      const filtered = repos.filter(repo => repo !== repoToRemove);
-      await chrome.storage.sync.set({ pinnedRepos: filtered });
-      
-      displayRepos(filtered);
-      showStatus('Repository removed', 'success');
-      refreshGitHubTabs();
-    }
+      if (!name || !url) return;
 
-    async function removeProject(projectName) {
-      const result = await chrome.storage.sync.get(['projects']);
-      const projects = result.projects || [];
+      const { repos, projects } = await loadData();
+      projects.push({ name, url });
+      await saveData(repos, projects);
       
-      const filtered = projects.filter(p => p.name !== projectName);
-      await chrome.storage.sync.set({ projects: filtered });
-      
-      displayProjects(filtered);
-      showStatus('Project removed', 'success');
-      refreshGitHubTabs();
-    }
+      document.getElementById('project-name').value = '';
+      document.getElementById('project-url').value = '';
+      render();
+    };
 
-    function showStatus(message, type) {
-      const status = document.getElementById('status');
-      status.textContent = message;
-      status.className = `status status-${type}`;
-      
-      setTimeout(() => {
-        status.textContent = '';
-        status.className = 'status';
-      }, 3000);
-    }
+    window.removeProject = async function(index) {
+      const { repos, projects } = await loadData();
+      projects.splice(index, 1);
+      await saveData(repos, projects);
+      render();
+    };
 
-    async function refreshGitHubTabs() {
-      const tabs = await chrome.tabs.query({ url: 'https://github.com/*' });
-      tabs.forEach(tab => {
-        chrome.tabs.reload(tab.id);
-      });
-    }
+    render();
   </script>
 </body>
 </html>
