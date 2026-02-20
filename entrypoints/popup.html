@@ -180,7 +180,7 @@
     <h2>Pinned Repositories</h2>
     <div class="add-form">
       <input type="text" id="repo-input" placeholder="owner/repo">
-      <button onclick="addRepo()">Add</button>
+      <button id="add-repo-btn">Add</button>
     </div>
     <ul class="item-list" id="repo-list"></ul>
   </div>
@@ -191,7 +191,7 @@
       <input type="text" id="project-name" placeholder="Name">
       <input type="text" id="project-url" placeholder="URL">
     </div>
-    <button onclick="addProject()" style="width: 100%; margin-bottom: 12px;">Add Project</button>
+    <button id="add-project-btn" style="width: 100%; margin-bottom: 12px;">Add Project</button>
     <ul class="item-list" id="project-list"></ul>
   </div>
 
@@ -224,7 +224,7 @@
         <li class="item">
           <div class="item-header">
             <span class="item-name">${repo.name}</span>
-            <button class="remove-btn" onclick="removeRepo(${index})">×</button>
+            <button class="remove-btn" data-remove-repo="${index}">×</button>
           </div>
           <div class="tabs-section">
             <div class="tabs-label">Quick links:</div>
@@ -232,8 +232,9 @@
               ${REPO_TABS.map(tab => `
                 <div class="tab-checkbox">
                   <input type="checkbox" id="repo-${index}-${tab}" 
-                         ${repo.tabs?.includes(tab) ? 'checked' : ''}
-                         onchange="toggleRepoTab(${index}, '${tab}')">
+                         data-repo-index="${index}"
+                         data-tab="${tab}"
+                         ${repo.tabs?.includes(tab) ? 'checked' : ''}>
                   <label for="repo-${index}-${tab}">${tab}</label>
                 </div>
               `).join('')}
@@ -250,13 +251,59 @@
               <div class="item-name">${project.name}</div>
               <div style="font-size: 11px; color: #8b949e; margin-top: 2px;">${project.url}</div>
             </div>
-            <button class="remove-btn" onclick="removeProject(${index})">×</button>
+            <button class="remove-btn" data-remove-project="${index}">×</button>
           </div>
         </li>
       `).join('') || '<li style="color: #8b949e; font-size: 12px; padding: 8px 0;">No projects added</li>';
+
+      attachListeners();
     }
 
-    window.addRepo = async function() {
+    function attachListeners() {
+      document.querySelectorAll('[data-remove-repo]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const index = parseInt(btn.dataset.removeRepo);
+          const { repos, projects } = await loadData();
+          repos.splice(index, 1);
+          await saveData(repos, projects);
+          render();
+        });
+      });
+
+      document.querySelectorAll('[data-remove-project]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const index = parseInt(btn.dataset.removeProject);
+          const { repos, projects } = await loadData();
+          projects.splice(index, 1);
+          await saveData(repos, projects);
+          render();
+        });
+      });
+
+      document.querySelectorAll('[data-repo-index][data-tab]').forEach(checkbox => {
+        checkbox.addEventListener('change', async () => {
+          const repoIndex = parseInt(checkbox.dataset.repoIndex);
+          const tab = checkbox.dataset.tab;
+          
+          const { repos, projects } = await loadData();
+          const repo = repos[repoIndex];
+          
+          if (!repo.tabs) repo.tabs = [];
+          
+          if (checkbox.checked) {
+            if (!repo.tabs.includes(tab)) {
+              repo.tabs.push(tab);
+            }
+          } else {
+            repo.tabs = repo.tabs.filter(t => t !== tab);
+          }
+          
+          await saveData(repos, projects);
+        });
+      });
+    }
+
+    document.getElementById('add-repo-btn').addEventListener('click', async () => {
       const input = document.getElementById('repo-input');
       const name = input.value.trim();
       
@@ -272,31 +319,9 @@
       
       input.value = '';
       render();
-    };
+    });
 
-    window.removeRepo = async function(index) {
-      const { repos, projects } = await loadData();
-      repos.splice(index, 1);
-      await saveData(repos, projects);
-      render();
-    };
-
-    window.toggleRepoTab = async function(repoIndex, tab) {
-      const { repos, projects } = await loadData();
-      const repo = repos[repoIndex];
-      
-      if (!repo.tabs) repo.tabs = [];
-      
-      if (repo.tabs.includes(tab)) {
-        repo.tabs = repo.tabs.filter(t => t !== tab);
-      } else {
-        repo.tabs.push(tab);
-      }
-      
-      await saveData(repos, projects);
-    };
-
-    window.addProject = async function() {
+    document.getElementById('add-project-btn').addEventListener('click', async () => {
       const name = document.getElementById('project-name').value.trim();
       const url = document.getElementById('project-url').value.trim();
       
@@ -309,14 +334,19 @@
       document.getElementById('project-name').value = '';
       document.getElementById('project-url').value = '';
       render();
-    };
+    });
 
-    window.removeProject = async function(index) {
-      const { repos, projects } = await loadData();
-      projects.splice(index, 1);
-      await saveData(repos, projects);
-      render();
-    };
+    document.getElementById('repo-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('add-repo-btn').click();
+      }
+    });
+
+    document.getElementById('project-url').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('add-project-btn').click();
+      }
+    });
 
     render();
   </script>
