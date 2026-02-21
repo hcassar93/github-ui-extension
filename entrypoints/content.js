@@ -27,28 +27,11 @@ export default defineContentScript({
       });
     }
 
-    async function injectCustomSection() {
-      if (window.location.pathname !== '/' && window.location.pathname !== '') {
-        return;
-      }
+    function isHomepage() {
+      return window.location.pathname === '/' || window.location.pathname === '';
+    }
 
-      const sidebar = await waitForSidebar();
-      const { repos, projects, people } = await loadData();
-
-      const existing = document.getElementById('github-ui-ext-section');
-      if (existing) existing.remove();
-
-      const section = document.createElement('div');
-      section.id = 'github-ui-ext-section';
-      section.style.cssText = `
-        background: linear-gradient(135deg, #1a1f2e 0%, #161b22 100%);
-        border: 1px solid #30363d;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 16px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      `;
-
+    function generatePinnedHTML(repos, projects, people) {
       let html = `
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
           <span style="font-size: 18px;">📌</span>
@@ -156,10 +139,11 @@ export default defineContentScript({
         `;
       }
 
-      section.innerHTML = html;
-      
-      // Add hover effects
-      section.addEventListener('mouseover', (e) => {
+      return html;
+    }
+
+    function addHoverEffects(element) {
+      element.addEventListener('mouseover', (e) => {
         const link = e.target.closest('a');
         if (link) {
           if (link.style.background) {
@@ -171,7 +155,7 @@ export default defineContentScript({
         }
       });
       
-      section.addEventListener('mouseout', (e) => {
+      element.addEventListener('mouseout', (e) => {
         const link = e.target.closest('a');
         if (link) {
           if (link.style.background) {
@@ -182,16 +166,181 @@ export default defineContentScript({
           }
         }
       });
+    }
+
+    async function injectCustomSection() {
+      if (!isHomepage()) {
+        return;
+      }
+
+      const sidebar = await waitForSidebar();
+      const { repos, projects, people } = await loadData();
+
+      const existing = document.getElementById('github-ui-ext-section');
+      if (existing) existing.remove();
+
+      const section = document.createElement('div');
+      section.id = 'github-ui-ext-section';
+      section.style.cssText = `
+        background: linear-gradient(135deg, #1a1f2e 0%, #161b22 100%);
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      `;
+
+      section.innerHTML = generatePinnedHTML(repos, projects, people);
+      addHoverEffects(section);
 
       sidebar.insertBefore(section, sidebar.firstChild);
     }
 
+    async function injectFloatingButton() {
+      if (isHomepage()) {
+        const existingFab = document.getElementById('github-ui-ext-fab');
+        const existingPopover = document.getElementById('github-ui-ext-popover');
+        if (existingFab) existingFab.remove();
+        if (existingPopover) existingPopover.remove();
+        return;
+      }
+
+      const existingFab = document.getElementById('github-ui-ext-fab');
+      if (existingFab) return;
+
+      const { repos, projects, people } = await loadData();
+
+      // Create FAB button
+      const fab = document.createElement('button');
+      fab.id = 'github-ui-ext-fab';
+      fab.innerHTML = '📌';
+      fab.title = 'Pinned Links';
+      fab.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        left: 24px;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1a1f2e 0%, #161b22 100%);
+        border: 1px solid #30363d;
+        color: #e6edf3;
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: translateY(10px);
+        animation: fabFadeIn 0.3s ease forwards;
+      `;
+
+      // Add animation keyframes
+      if (!document.getElementById('github-ui-ext-styles')) {
+        const style = document.createElement('style');
+        style.id = 'github-ui-ext-styles';
+        style.textContent = `
+          @keyframes fabFadeIn {
+            to {
+              opacity: 0.7;
+              transform: translateY(0);
+            }
+          }
+          @keyframes popoverSlideIn {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          #github-ui-ext-fab:hover {
+            opacity: 1 !important;
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      // Create popover
+      const popover = document.createElement('div');
+      popover.id = 'github-ui-ext-popover';
+      popover.style.cssText = `
+        position: fixed;
+        bottom: 80px;
+        left: 24px;
+        width: 320px;
+        max-height: 500px;
+        overflow-y: auto;
+        background: linear-gradient(135deg, #1a1f2e 0%, #161b22 100%);
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 20px;
+        z-index: 9999;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        display: none;
+        animation: popoverSlideIn 0.2s ease;
+      `;
+
+      popover.innerHTML = generatePinnedHTML(repos, projects, people);
+      addHoverEffects(popover);
+
+      // Toggle popover
+      fab.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isVisible = popover.style.display === 'block';
+        popover.style.display = isVisible ? 'none' : 'block';
+      });
+
+      // Close popover when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!popover.contains(e.target) && !fab.contains(e.target)) {
+          popover.style.display = 'none';
+        }
+      });
+
+      document.body.appendChild(fab);
+      document.body.appendChild(popover);
+    }
+
+    function initialize() {
+      if (isHomepage()) {
+        injectCustomSection();
+      } else {
+        injectFloatingButton();
+      }
+    }
+
+    function initialize() {
+      if (isHomepage()) {
+        injectCustomSection();
+      } else {
+        injectFloatingButton();
+      }
+    }
+
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area === 'sync' && (changes.repos || changes.projects || changes.people)) {
-        injectCustomSection();
+        initialize();
       }
     });
 
-    injectCustomSection();
+    // Handle GitHub SPA navigation
+    let lastUrl = location.href;
+    new MutationObserver(() => {
+      const currentUrl = location.href;
+      if (currentUrl !== lastUrl) {
+        lastUrl = currentUrl;
+        initialize();
+      }
+    }).observe(document.body, { subtree: true, childList: true });
+
+    initialize();
   }
 });
